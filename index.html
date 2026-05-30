@@ -1,121 +1,170 @@
-<!DOCTYPE html>
+      <!DOCTYPE html>
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Dino V9 Online</title>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js"></script>
+<title>Desvia do Meme V2 😂</title>
 
 <style>
-body { margin:0; background:black; font-family:Arial; }
-canvas { display:block; margin:auto; background:#87CEEB; }
-#hud { position:absolute; top:10px; left:10px; color:white; }
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: Arial;
+  background: #111;
+}
+
+canvas {
+  display: block;
+  margin: auto;
+  background: #87CEEB;
+}
+
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  font-size: 18px;
+}
+
+#btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  padding: 15px;
+  font-size: 18px;
+}
 </style>
 </head>
 
 <body>
 
-<div id="hud"></div>
+<div id="hud">Pontos: 0</div>
+<button id="btn" onclick="jump()">PULAR 😂</button>
+
 <canvas id="game" width="800" height="300"></canvas>
 
 <script>
-// 🔥 CONFIG FIREBASE (você substitui com o seu depois)
-const firebaseConfig = {
-  apiKey: "SUA_API",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  databaseURL: "https://SEU_PROJETO.firebaseio.com",
-  projectId: "SEU_PROJETO"
+const c = document.getElementById("game");
+const ctx = c.getContext("2d");
+
+// 😂 frases aleatórias
+let frases = [
+  "Você foi humilhado por um meme 💀",
+  "O meme te derrotou sem dó 😂",
+  "Game Over nível vergonha alheia",
+  "Você caiu no bait do meme 😭",
+  "F pra você, campeão"
+];
+
+// 🧑 skins
+let skins = [
+  "https://image.pngaaa.com/594/2029594-middle.png",
+  "https://e7.pngegg.com/pngimages/45/416/png-clipart-crying-cat-meme-memes-mixed-memes.png",
+  "https://png.pngtree.com/png-vector/20250416/ourmid/pngtree-muscle-dog-tuff-meme-sticker-vector-cute-illustration-png-image_15995130.png"
+];
+
+let playerImg = new Image();
+
+// 🧠 player
+let player = {
+  x: 50,
+  y: 220,
+  w: 60,
+  h: 60,
+  vy: 0,
+  jump: false
 };
 
-// init
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-// 🧑 player
-let player = { x:50, y:200, w:70, h:70, vy:0, jump:false };
-
+let gravity = 1;
 let score = 0;
-let speed = 6;
-let game = true;
 
-// 📦 obstáculos
-let obs = [];
+// 😂 memes
+let memes = [
+  "https://i.imgflip.com/30b1gx.jpg",
+  "https://i.imgflip.com/1otk96.jpg",
+  "https://i.imgflip.com/1bij.jpg"
+];
+
+let enemies = [];
+
+// 🎵 som simples (efeito básico)
+let jumpSound = new Audio("https://www.soundjay.com/button/sounds/button-16.mp3");
+
+// 🧑 escolhe skin aleatória
+playerImg.src = skins[Math.floor(Math.random()*skins.length)];
 
 // ⌨️ pulo
 document.addEventListener("keydown", e=>{
-  if(e.code==="Space" && !player.jump){
-    player.vy=-15;
-    player.jump=true;
-  }
+  if(e.code==="Space") jump();
 });
 
-function spawn(){
-  obs.push({x:800,y:210,w:60,h:60});
+function jump(){
+  if(!player.jump){
+    player.vy = -15;
+    player.jump = true;
+    jumpSound.play();
+  }
 }
 
-setInterval(spawn,1300);
-
-// 💀 salvar no ranking online
-function saveScore(){
-  let name = prompt("Seu nome:");
-  db.ref("ranking").push({
-    name:name,
-    score:score
+// 📦 spawn memes
+function spawn(){
+  enemies.push({
+    x: 800,
+    y: Math.random()*180,
+    w: 60,
+    h: 60,
+    img: memes[Math.floor(Math.random()*memes.length)]
   });
 }
 
+setInterval(spawn, 1000);
+
 // 🔄 update
 function update(){
-  if(!game) return;
-
-  speed += 0.001;
-
-  player.vy += 1;
+  player.vy += gravity;
   player.y += player.vy;
 
-  if(player.y>=200){
-    player.y=200;
-    player.jump=false;
+  if(player.y >= 220){
+    player.y = 220;
+    player.jump = false;
   }
 
-  for(let i=0;i<obs.length;i++){
-    let o=obs[i];
-    o.x-=speed;
+  for(let i=0;i<enemies.length;i++){
+    let e = enemies[i];
+    e.x -= 6;
 
     if(
-      player.x<o.x+o.w &&
-      player.x+player.w>o.x &&
-      player.y<o.y+o.h &&
-      player.y+player.h>o.y
+      player.x < e.x + e.w &&
+      player.x + player.w > e.x &&
+      player.y < e.y + e.h &&
+      player.y + player.h > e.y
     ){
-      game=false;
-      saveScore();
-      alert("Game Over: "+score);
+      let frase = frases[Math.floor(Math.random()*frases.length)];
+      alert(frase + "\n\nPontos: " + score);
       location.reload();
     }
 
-    if(o.x<-100){
-      obs.splice(i,1);
+    if(e.x < -60){
+      enemies.splice(i,1);
       score++;
+      document.getElementById("hud").innerText = "Pontos: " + score;
     }
   }
-
-  document.getElementById("hud").innerHTML="Score: "+score;
 }
 
 // 🎨 draw
 function draw(){
-  let c=document.getElementById("game").getContext("2d");
+  ctx.fillStyle = "#87CEEB";
+  ctx.fillRect(0,0,800,300);
 
-  c.fillStyle="#87CEEB";
-  c.fillRect(0,0,800,300);
+  // player
+  ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
-  c.fillStyle="blue";
-  c.fillRect(player.x,player.y,player.w,player.h);
-
-  c.fillStyle="red";
-  for(let o of obs){
-    c.fillRect(o.x,o.y,o.w,o.h);
+  // memes
+  for(let e of enemies){
+    let img = new Image();
+    img.src = e.img;
+    ctx.drawImage(img, e.x, e.y, e.w, e.h);
   }
 }
 
