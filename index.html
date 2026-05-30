@@ -2,34 +2,34 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Dino Game V3</title>
+<title>Dino Game V8</title>
 
 <style>
 body {
   margin: 0;
   font-family: Arial;
   background: black;
-  text-align: center;
+  overflow: hidden;
 }
 
 canvas {
   display: block;
   margin: auto;
-  border: 2px solid black;
   background: #87CEEB;
+  border: 2px solid black;
 }
 
-#menu {
+#menu, #shop {
   position: absolute;
   width: 100%;
   top: 20px;
   color: white;
+  text-align: center;
 }
 
 button {
   padding: 10px;
   margin: 5px;
-  cursor: pointer;
 }
 
 #hud {
@@ -37,7 +37,6 @@ button {
   top: 10px;
   left: 10px;
   color: white;
-  font-size: 18px;
 }
 </style>
 </head>
@@ -45,46 +44,52 @@ button {
 <body>
 
 <div id="menu">
-  <h2>Escolha seu personagem</h2>
-  <button onclick="startGame(0)">Personagem 1</button>
-  <button onclick="startGame(1)">Personagem 2</button>
-  <button onclick="startGame(2)">Personagem 3</button>
+  <h2>Dino Game V8</h2>
+  <input id="name" placeholder="Seu nome">
+  <br>
+  <button onclick="startGame()">Jogar</button>
+  <button onclick="openShop()">Loja</button>
+</div>
+
+<div id="shop" style="display:none;">
+  <h3>Loja</h3>
+  <button onclick="buy(1, 10)">Cat (10 coins)</button>
+  <button onclick="buy(2, 20)">Dog (20 coins)</button>
+  <br>
+  <button onclick="closeShop()">Voltar</button>
 </div>
 
 <div id="hud"></div>
+
 <canvas id="game" width="800" height="300"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// 🧑 personagens
-let players = [
+// 🧑 skins
+let skins = [
   "https://image.pngaaa.com/594/2029594-middle.png",
   "https://e7.pngegg.com/pngimages/45/416/png-clipart-crying-cat-meme-memes-mixed-memes.png",
   "https://png.pngtree.com/png-vector/20250416/ourmid/pngtree-muscle-dog-tuff-meme-sticker-vector-cute-illustration-png-image_15995130.png"
 ];
 
+let unlocked = [true, false, false];
+let skin = 0;
+
 // 🧱 obstáculos
-let obstacleImgs = [
+let obsImgs = [
   "https://png.pngtree.com/element_our/20190528/ourmid/pngtree-summer-whole-watermelon-png-image_1184558.jpg",
   "https://img.magnific.com/psd-premium/png-realista-de-banana-em-fundo-branco_1278073-1635.jpg"
 ];
-
-// 🌅 fundo
-let bg1 = "https://png.pngtree.com/background/20211217/original/pngtree-desert-sunset-dusk-abstract-cartoon-nature-background-picture-image_1596606.jpg";
-
-let bg2 = "https://png.pngtree.com/thumb_back/fw800/background/20260122/pngtree-desert-landscape-at-night-with-full-moon-and-sand-dunes-image_21167770.webp";
-
-let bg = bg1;
 
 // 🧑 player
 let playerImg = new Image();
 let player = {
   x: 50,
-  y: 220,
-  w: 40,
-  h: 40,
+  y: 200,
+  w: 70,
+  h: 70,
   vy: 0,
   jumping: false
 };
@@ -93,119 +98,130 @@ let player = {
 let gravity = 1;
 let speed = 6;
 let score = 0;
-let bestScore = localStorage.getItem("bestScore") || 0;
+let coins = 0;
+let game = false;
 
 let obstacles = [];
-let gameStarted = false;
-let gameOver = false;
 
-// 📦 preload imagens (IMPORTANTE)
-let loadedObstacles = obstacleImgs.map(src => {
-  let img = new Image();
-  img.src = src;
-  return img;
-});
+// 💾 recorde
+let best = Number(localStorage.getItem("best") || 0);
 
 // ⌨️ pulo
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && !player.jumping && gameStarted) {
-    player.vy = -14;
-    player.jumping = true;
-  }
+  if (e.code === "Space") jump();
 });
 
+function jump() {
+  if (!player.jumping && game) {
+    player.vy = -15;
+    player.jumping = true;
+  }
+}
+
 // 🎮 start
-function startGame(choice) {
-  playerImg.src = players[choice];
-
+function startGame() {
+  playerImg.src = skins[skin];
   document.getElementById("menu").style.display = "none";
-  gameStarted = true;
-
+  game = true;
   loop();
 }
 
-// 📦 criar obstáculo
-function createObstacle() {
+// 🏪 loja
+function openShop() {
+  document.getElementById("shop").style.display = "block";
+}
+function closeShop() {
+  document.getElementById("shop").style.display = "none";
+}
+
+function buy(id, price) {
+  if (coins >= price && !unlocked[id]) {
+    coins -= price;
+    unlocked[id] = true;
+    alert("Skin desbloqueada!");
+  }
+}
+
+// 📦 obstáculos
+function spawnObs() {
   obstacles.push({
     x: 800,
-    y: 225,
-    w: 35,
-    h: 35,
-    type: Math.floor(Math.random() * loadedObstacles.length)
+    y: 210,
+    w: 60,
+    h: 60,
+    type: Math.floor(Math.random() * obsImgs.length)
   });
 }
 
 setInterval(() => {
-  if (gameStarted && !gameOver) createObstacle();
+  if (game) spawnObs();
 }, 1300);
 
 // 🔄 update
 function update() {
-  if (gameOver) return;
+  if (!game) return;
 
-  speed += 0.002;
+  speed += 0.001;
 
-  // player física
   player.vy += gravity;
   player.y += player.vy;
 
-  if (player.y >= 220) {
-    player.y = 220;
+  if (player.y >= 200) {
+    player.y = 200;
     player.jumping = false;
   }
 
-  // obstáculos
   for (let i = 0; i < obstacles.length; i++) {
     let o = obstacles[i];
     o.x -= speed;
 
-    // 💥 COLISÃO AJUSTADA (HITBOX MENOR)
     if (
-      player.x + 8 < o.x + o.w &&
-      player.x + player.w - 8 > o.x &&
-      player.y + 8 < o.y + o.h &&
-      player.y + player.h - 8 > o.y
+      player.x + 10 < o.x + o.w - 10 &&
+      player.x + player.w - 10 > o.x + 10 &&
+      player.y + 10 < o.y + o.h - 10 &&
+      player.y + player.h - 10 > o.y + 10
     ) {
-      gameOver = true;
-
-      if (score > bestScore) {
-        bestScore = score;
-        localStorage.setItem("bestScore", bestScore);
-      }
-
-      alert("💀 Game Over! Score: " + score);
-      location.reload();
+      endGame();
     }
 
-    if (o.x + o.w < 0) {
+    if (o.x < -100) {
       obstacles.splice(i, 1);
       score++;
+      coins++;
     }
   }
 
-  bg = score % 2 === 0 ? bg1 : bg2;
-
   document.getElementById("hud").innerHTML =
-    "Score: " + score + " | Best: " + bestScore;
+    "Score: " + score + " | Coins: " + coins + " | Best: " + best;
+}
+
+// 💀 fim
+function endGame() {
+  if (score > best) {
+    best = score;
+    localStorage.setItem("best", best);
+  }
+
+  alert("Game Over! Score: " + score);
+  location.reload();
 }
 
 // 🎨 draw
 function draw() {
-  let bgImg = new Image();
-  bgImg.src = bg;
-  ctx.drawImage(bgImg, 0, 0, 800, 300);
+  ctx.fillStyle = "#87CEEB";
+  ctx.fillRect(0, 0, 800, 300);
 
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
   for (let o of obstacles) {
-    ctx.drawImage(loadedObstacles[o.type], o.x, o.y, o.w, o.h);
+    let img = new Image();
+    img.src = obsImgs[o.type];
+    ctx.drawImage(img, o.x, o.y, o.w, o.h);
   }
 }
 
 // 🔁 loop
 function loop() {
-  if (!gameStarted) return;
-
   update();
   draw();
   requestAnimationFrame(loop);
