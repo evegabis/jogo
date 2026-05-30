@@ -1,65 +1,100 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Dino Game Melhorado</title>
+<meta charset="UTF-8">
+<title>Super Dino Game V2</title>
 
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: Arial;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: black;
+  text-align: center;
+}
 
-    canvas {
-      display: block;
-      margin: auto;
-      background: #87CEEB;
-    }
+canvas {
+  display: block;
+  margin: auto;
+  border: 2px solid black;
+}
 
-    #score {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      font-size: 20px;
-      font-weight: bold;
-    }
-  </style>
+#menu {
+  position: absolute;
+  width: 100%;
+  top: 20px;
+  color: white;
+}
+
+button {
+  padding: 10px;
+  margin: 5px;
+  cursor: pointer;
+}
+
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  font-size: 18px;
+}
+</style>
 </head>
 
 <body>
 
-<div id="score">Pontos: 0</div>
+<div id="menu">
+  <h2>Escolha seu personagem</h2>
+  <button onclick="startGame(0)">Personagem 1</button>
+  <button onclick="startGame(1)">Personagem 2</button>
+  <button onclick="startGame(2)">Personagem 3</button>
+</div>
+
+<div id="hud"></div>
 <canvas id="game" width="800" height="300"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// 👤 personagem (sua imagem)
+// 🧑 personagens (SEUS LINKS)
+let players = [
+  "https://image.pngaaa.com/594/2029594-middle.png",
+  "https://e7.pngegg.com/pngimages/45/416/png-clipart-crying-cat-meme-memes-mixed-memes.png",
+  "https://png.pngtree.com/png-vector/20250416/ourmid/pngtree-muscle-dog-tuff-meme-sticker-vector-cute-illustration-png-image_15995130.png"
+];
+
 let playerImg = new Image();
-playerImg.src = "https://preview.redd.it/meme-man-original-hd-png-tranparent-3d-head-stonks-2922-3180-v0-jwg3gw87s6b41.png?width=1080&crop=smart&auto=webp&s=893b76d1beb8d0b676f427239f3f3c0f739165bb";
 
 let player = {
   x: 50,
   y: 220,
-  w: 45,
-  h: 45,
+  w: 50,
+  h: 50,
   vy: 0,
   jumping: false
 };
 
 let gravity = 1;
-let obstacles = [];
-let score = 0;
 let speed = 6;
+let score = 0;
+let obstacles = [];
+let gameStarted = false;
 let gameOver = false;
 
-// 🌗 dia/noite
-let skyDay = true;
-setInterval(() => {
-  skyDay = !skyDay;
-}, 8000);
+// 🏆 recorde salvo
+let bestScore = localStorage.getItem("bestScore") || 0;
+
+// 🌅 fundos
+let bg1 = "https://png.pngtree.com/background/20211217/original/pngtree-desert-sunset-dusk-abstract-cartoon-nature-background-picture-image_1596606.jpg";
+let bg2 = "https://png.pngtree.com/thumb_back/fw800/background/20260122/pngtree-desert-landscape-at-night-with-full-moon-and-sand-dunes-image_21167770.webp";
+let bg = bg1;
+
+// 🧱 obstáculos (SEUS LINKS)
+let obstaclesImg = [
+  "https://png.pngtree.com/element_our/20190528/ourmid/pngtree-summer-whole-watermelon-png-image_1184558.jpg",
+  "https://img.magnific.com/psd-premium/png-realista-de-banana-em-fundo-branco_1278073-1635.jpg?semt=ais_hybrid&w=740&q=80"
+];
 
 // ⌨️ pulo
 document.addEventListener("keydown", (e) => {
@@ -69,26 +104,38 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// 📦 obstáculos
+// criar obstáculo
 function createObstacle() {
   obstacles.push({
     x: 800,
-    y: 230,
-    w: 20,
-    h: 50
+    y: 220,
+    w: 50,
+    h: 50,
+    type: Math.floor(Math.random() * obstaclesImg.length)
   });
 }
 
-setInterval(createObstacle, 1400);
+setInterval(() => {
+  if (gameStarted && !gameOver) createObstacle();
+}, 1300);
 
-// 🔄 update
+// iniciar jogo
+function startGame(choice) {
+  playerImg.src = players[choice];
+
+  document.getElementById("menu").style.display = "none";
+  gameStarted = true;
+
+  loop();
+}
+
+// update
 function update() {
   if (gameOver) return;
 
-  // aumenta dificuldade
   speed += 0.002;
 
-  // player física
+  // player
   player.vy += gravity;
   player.y += player.vy;
 
@@ -98,7 +145,7 @@ function update() {
   }
 
   // obstáculos
-  obstacles.forEach((obs, index) => {
+  obstacles.forEach((obs, i) => {
     obs.x -= speed;
 
     // colisão
@@ -109,47 +156,51 @@ function update() {
       player.y + player.h > obs.y
     ) {
       gameOver = true;
-      alert("💀 Game Over! Pontos: " + score);
+
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem("bestScore", bestScore);
+      }
+
+      alert("💀 Game Over! Score: " + score);
       location.reload();
     }
 
-    // passou obstáculo
     if (obs.x + obs.w < 0) {
-      obstacles.splice(index, 1);
+      obstacles.splice(i, 1);
       score++;
-      document.getElementById("score").innerText = "Pontos: " + score;
     }
   });
+
+  bg = score % 2 === 0 ? bg1 : bg2;
+
+  document.getElementById("hud").innerHTML =
+    "Score: " + score + " | Best: " + bestScore;
 }
 
-// 🎨 desenhar
+// draw
 function draw() {
-  // céu dia/noite
-  ctx.fillStyle = skyDay ? "#87CEEB" : "#0b1d3a";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  let img = new Image();
+  img.src = bg;
+  ctx.drawImage(img, 0, 0, 800, 300);
 
-  // chão
-  ctx.fillStyle = "#444";
-  ctx.fillRect(0, 260, 800, 40);
-
-  // personagem
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
-  // obstáculos
-  ctx.fillStyle = "red";
-  obstacles.forEach(obs => {
-    ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+  obstacles.forEach(o => {
+    let obsImg = new Image();
+    obsImg.src = obstaclesImg[o.type];
+    ctx.drawImage(obsImg, o.x, o.y, o.w, o.h);
   });
 }
 
-// 🔁 loop do jogo
+// loop
 function loop() {
+  if (!gameStarted) return;
+
   update();
   draw();
   requestAnimationFrame(loop);
 }
-
-loop();
 </script>
 
 </body>
