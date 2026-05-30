@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Super Dino Game V2</title>
+<title>Dino Game V3</title>
 
 <style>
 body {
@@ -16,6 +16,7 @@ canvas {
   display: block;
   margin: auto;
   border: 2px solid black;
+  background: #87CEEB;
 }
 
 #menu {
@@ -57,69 +58,63 @@ button {
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// 🧑 personagens (SEUS LINKS)
+// 🧑 personagens
 let players = [
   "https://image.pngaaa.com/594/2029594-middle.png",
   "https://e7.pngegg.com/pngimages/45/416/png-clipart-crying-cat-meme-memes-mixed-memes.png",
   "https://png.pngtree.com/png-vector/20250416/ourmid/pngtree-muscle-dog-tuff-meme-sticker-vector-cute-illustration-png-image_15995130.png"
 ];
 
-let playerImg = new Image();
+// 🧱 obstáculos
+let obstacleImgs = [
+  "https://png.pngtree.com/element_our/20190528/ourmid/pngtree-summer-whole-watermelon-png-image_1184558.jpg",
+  "https://img.magnific.com/psd-premium/png-realista-de-banana-em-fundo-branco_1278073-1635.jpg"
+];
 
+// 🌅 fundo
+let bg1 = "https://png.pngtree.com/background/20211217/original/pngtree-desert-sunset-dusk-abstract-cartoon-nature-background-picture-image_1596606.jpg";
+
+let bg2 = "https://png.pngtree.com/thumb_back/fw800/background/20260122/pngtree-desert-landscape-at-night-with-full-moon-and-sand-dunes-image_21167770.webp";
+
+let bg = bg1;
+
+// 🧑 player
+let playerImg = new Image();
 let player = {
   x: 50,
   y: 220,
-  w: 50,
-  h: 50,
+  w: 40,
+  h: 40,
   vy: 0,
   jumping: false
 };
 
+// 🧠 game
 let gravity = 1;
 let speed = 6;
 let score = 0;
+let bestScore = localStorage.getItem("bestScore") || 0;
+
 let obstacles = [];
 let gameStarted = false;
 let gameOver = false;
 
-// 🏆 recorde salvo
-let bestScore = localStorage.getItem("bestScore") || 0;
-
-// 🌅 fundos
-let bg1 = "https://png.pngtree.com/background/20211217/original/pngtree-desert-sunset-dusk-abstract-cartoon-nature-background-picture-image_1596606.jpg";
-let bg2 = "https://png.pngtree.com/thumb_back/fw800/background/20260122/pngtree-desert-landscape-at-night-with-full-moon-and-sand-dunes-image_21167770.webp";
-let bg = bg1;
-
-// 🧱 obstáculos (SEUS LINKS)
-let obstaclesImg = [
-  "https://png.pngtree.com/element_our/20190528/ourmid/pngtree-summer-whole-watermelon-png-image_1184558.jpg",
-  "https://img.magnific.com/psd-premium/png-realista-de-banana-em-fundo-branco_1278073-1635.jpg?semt=ais_hybrid&w=740&q=80"
-];
+// 📦 preload imagens (IMPORTANTE)
+let loadedObstacles = obstacleImgs.map(src => {
+  let img = new Image();
+  img.src = src;
+  return img;
+});
 
 // ⌨️ pulo
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && !player.jumping) {
-    player.vy = -15;
+  if (e.code === "Space" && !player.jumping && gameStarted) {
+    player.vy = -14;
     player.jumping = true;
   }
 });
 
-// criar obstáculo
-function createObstacle() {
-  obstacles.push({
-    x: 800,
-    y: 220,
-    w: 50,
-    h: 50,
-    type: Math.floor(Math.random() * obstaclesImg.length)
-  });
-}
-
-setInterval(() => {
-  if (gameStarted && !gameOver) createObstacle();
-}, 1300);
-
-// iniciar jogo
+// 🎮 start
 function startGame(choice) {
   playerImg.src = players[choice];
 
@@ -129,13 +124,28 @@ function startGame(choice) {
   loop();
 }
 
-// update
+// 📦 criar obstáculo
+function createObstacle() {
+  obstacles.push({
+    x: 800,
+    y: 225,
+    w: 35,
+    h: 35,
+    type: Math.floor(Math.random() * loadedObstacles.length)
+  });
+}
+
+setInterval(() => {
+  if (gameStarted && !gameOver) createObstacle();
+}, 1300);
+
+// 🔄 update
 function update() {
   if (gameOver) return;
 
   speed += 0.002;
 
-  // player
+  // player física
   player.vy += gravity;
   player.y += player.vy;
 
@@ -145,15 +155,16 @@ function update() {
   }
 
   // obstáculos
-  obstacles.forEach((obs, i) => {
-    obs.x -= speed;
+  for (let i = 0; i < obstacles.length; i++) {
+    let o = obstacles[i];
+    o.x -= speed;
 
-    // colisão
+    // 💥 COLISÃO AJUSTADA (HITBOX MENOR)
     if (
-      player.x < obs.x + obs.w &&
-      player.x + player.w > obs.x &&
-      player.y < obs.y + obs.h &&
-      player.y + player.h > obs.y
+      player.x + 8 < o.x + o.w &&
+      player.x + player.w - 8 > o.x &&
+      player.y + 8 < o.y + o.h &&
+      player.y + player.h - 8 > o.y
     ) {
       gameOver = true;
 
@@ -166,11 +177,11 @@ function update() {
       location.reload();
     }
 
-    if (obs.x + obs.w < 0) {
+    if (o.x + o.w < 0) {
       obstacles.splice(i, 1);
       score++;
     }
-  });
+  }
 
   bg = score % 2 === 0 ? bg1 : bg2;
 
@@ -178,22 +189,20 @@ function update() {
     "Score: " + score + " | Best: " + bestScore;
 }
 
-// draw
+// 🎨 draw
 function draw() {
-  let img = new Image();
-  img.src = bg;
-  ctx.drawImage(img, 0, 0, 800, 300);
+  let bgImg = new Image();
+  bgImg.src = bg;
+  ctx.drawImage(bgImg, 0, 0, 800, 300);
 
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
-  obstacles.forEach(o => {
-    let obsImg = new Image();
-    obsImg.src = obstaclesImg[o.type];
-    ctx.drawImage(obsImg, o.x, o.y, o.w, o.h);
-  });
+  for (let o of obstacles) {
+    ctx.drawImage(loadedObstacles[o.type], o.x, o.y, o.w, o.h);
+  }
 }
 
-// loop
+// 🔁 loop
 function loop() {
   if (!gameStarted) return;
 
